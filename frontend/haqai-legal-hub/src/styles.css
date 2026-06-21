@@ -1,0 +1,196 @@
+@font-face {
+  font-family: "Jameel Noori Nastaliq";
+  src: url("https://cdn.jsdelivr.net/gh/nafees-elahi/urdu-fonts/Jameel%20Noori%20Nastaliq.woff2") format("woff2"),
+       url("https://cdn.jsdelivr.net/gh/nafees-elahi/urdu-fonts/Jameel%20Noori%20Nastaliq.woff") format("woff"),
+       url("https://cdn.jsdelivr.net/gh/nafees-elahi/urdu-fonts/Jameel%20Noori%20Nastaliq.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-navy: var(--navy);
+  --color-navy-deep: var(--navy-deep);
+  --color-navy-light: var(--navy-light);
+  --font-display: var(--font-display);
+  --font-sans: var(--font-sans);
+}
+
+:root {
+  --radius: 0.5rem;
+
+  /* Brand */
+  --navy-deep: oklch(0.16 0.04 265);   /* #0a0f1e ish */
+  --navy: oklch(0.21 0.045 265);
+  --navy-light: oklch(0.27 0.05 265);
+  --gold: oklch(0.78 0.13 85);          /* #c9a84c */
+  --gold-soft: oklch(0.85 0.10 88);
+
+  --background: var(--navy-deep);
+  --foreground: oklch(0.98 0.005 90);
+
+  --card: oklch(0.20 0.04 265);
+  --card-foreground: oklch(0.98 0.005 90);
+  --popover: oklch(0.20 0.04 265);
+  --popover-foreground: oklch(0.98 0.005 90);
+
+  --primary: var(--gold);
+  --primary-foreground: var(--navy-deep);
+  --secondary: oklch(0.25 0.04 265);
+  --secondary-foreground: oklch(0.98 0.005 90);
+  --muted: oklch(0.24 0.035 265);
+  --muted-foreground: oklch(0.72 0.02 90);
+  --accent: var(--gold);
+  --accent-foreground: var(--navy-deep);
+  --destructive: oklch(0.62 0.22 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: var(--gold);
+
+  --font-display: "Poppins", "Cormorant Garamond", serif;
+  --font-sans: "Poppins", "Jameel Noori Nastaliq", "Noto Nastaliq Urdu", system-ui, sans-serif;
+
+  --gradient-gold: linear-gradient(135deg, oklch(0.85 0.12 88), oklch(0.72 0.14 80));
+  --gradient-navy: linear-gradient(180deg, oklch(0.16 0.04 265), oklch(0.20 0.05 265));
+  --shadow-gold: 0 10px 40px -10px oklch(0.78 0.13 85 / 0.35);
+  --shadow-elegant: 0 20px 60px -20px oklch(0.05 0.02 265 / 0.6);
+}
+
+.light {
+  color-scheme: light;
+  --background: oklch(0.98 0.005 90);
+  --foreground: oklch(0.16 0.04 265);
+
+  --card: oklch(0.96 0.008 90);
+  --card-foreground: oklch(0.16 0.04 265);
+  --popover: oklch(0.96 0.008 90);
+  --popover-foreground: oklch(0.16 0.04 265);
+
+  --secondary: oklch(0.91 0.01 90);
+  --secondary-foreground: oklch(0.16 0.04 265);
+  --muted: oklch(0.93 0.01 90);
+  --muted-foreground: oklch(0.40 0.02 265);
+
+  --border: oklch(0.16 0.04 265 / 12%);
+  --input: oklch(0.16 0.04 265 / 8%);
+
+  --primary: oklch(0.16 0.04 265); /* Navy primary buttons in light mode */
+  --primary-foreground: oklch(0.98 0.005 90); /* Light text on navy buttons */
+  --gold: oklch(0.52 0.11 82); /* Dark golden for light mode contrast */
+  --gold-soft: oklch(0.60 0.09 82);
+  --gradient-gold: linear-gradient(135deg, oklch(0.52 0.11 82), oklch(0.20 0.05 265)); /* Dark gold to navy gradient */
+  --gradient-navy: linear-gradient(180deg, oklch(0.98 0.005 90), oklch(0.93 0.01 90));
+  --shadow-gold: 0 10px 40px -10px oklch(0.16 0.04 265 / 0.15);
+  --shadow-elegant: 0 10px 40px -15px oklch(0.05 0.02 265 / 0.12);
+}
+
+.dark { color-scheme: dark; }
+
+@layer base {
+  * { border-color: var(--color-border); }
+  html, body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.01em; }
+}
+
+@layer utilities {
+  .text-gradient-gold {
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .bg-gradient-navy { background: var(--gradient-navy); }
+  .shadow-gold { box-shadow: var(--shadow-gold); }
+  .shadow-elegant { box-shadow: var(--shadow-elegant); }
+  .ornament-line {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold) 50%, transparent);
+  }
+  .grain::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image: radial-gradient(oklch(1 0 0 / 0.03) 1px, transparent 1px);
+    background-size: 3px 3px;
+    pointer-events: none;
+  }
+  .ai-law-bg {
+    position: relative;
+    isolation: isolate;
+  }
+  .ai-law-bg::before {
+    content: "";
+    position: absolute;
+    inset: -20% -10% -10%;
+    background:
+      radial-gradient(60% 60% at 15% 10%, oklch(0.78 0.13 85 / 0.18), transparent 60%),
+      radial-gradient(50% 50% at 85% 20%, oklch(0.45 0.08 265 / 0.5), transparent 65%),
+      radial-gradient(40% 40% at 60% 85%, oklch(0.78 0.13 85 / 0.12), transparent 60%);
+    z-index: -2;
+    pointer-events: none;
+  }
+  .ai-law-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(90deg, oklch(1 0 0 / 0.05) 0 1px, transparent 1px 28px),
+      repeating-linear-gradient(0deg, oklch(1 0 0 / 0.04) 0 1px, transparent 1px 28px),
+      repeating-linear-gradient(45deg, oklch(0.78 0.13 85 / 0.08) 0 1px, transparent 1px 140px),
+      radial-gradient(oklch(0.98 0.005 90 / 0.08) 1px, transparent 1px);
+    background-size: auto, auto, auto, 120px 120px;
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: -1;
+  }
+}
+
+@keyframes audio-bar-pulse {
+  0%, 100% {
+    transform: scaleY(0.15);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.audio-pulse-bar {
+  animation: audio-bar-pulse 1s ease-in-out infinite;
+  transform-origin: bottom;
+}

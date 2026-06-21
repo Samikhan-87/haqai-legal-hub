@@ -1,0 +1,11 @@
+.venv/
+vectorstore/
+__pycache__/
+.gemini/
+node_modules/
+.sixth/
+.tanstack/
+.wrangler/
+dist/
+*.log
+.env
