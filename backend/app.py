@@ -14,8 +14,8 @@ with gr.Blocks(title="HaqAI Legal Backend API") as demo:
         """
     )
 
-# Mount Gradio UI at /gradio so root endpoints remain 100% standard FastAPI
-app = gr.mount_gradio_app(fastapi_app, demo, path="/")
+# Mount Gradio UI at /status so root endpoints remain 100% standard FastAPI
+app = gr.mount_gradio_app(fastapi_app, demo, path="/status")
 
 if __name__ == "__main__":
     import uvicorn
