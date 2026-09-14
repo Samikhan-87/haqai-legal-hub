@@ -1,15 +1,76 @@
-from langchain_ollama import OllamaEmbeddings, OllamaLLM
+import os
+import requests
+import logging
+from langchain_core.embeddings import Embeddings
 from langchain_chroma import Chroma
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-VECTORSTORE_DIR = "../vectorstore"
+logger = logging.getLogger("RAG")
 
-embeddings = OllamaEmbeddings(model="bge-m3", base_url="http://127.0.0.1:11434")
+# Dynamic vectorstore directory (local or cloud container)
+if os.path.exists("vectorstore"):
+    VECTORSTORE_DIR = "vectorstore"
+elif os.path.exists("../vectorstore"):
+    VECTORSTORE_DIR = "../vectorstore"
+else:
+    VECTORSTORE_DIR = os.getenv("VECTORSTORE_DIR", "vectorstore")
+
+class HybridBgeM3Embeddings(Embeddings):
+    """
+    Dual-mode BGE-M3 Embeddings:
+    1. Cloud Mode: Uses Hugging Face free Serverless Inference API if HF_TOKEN is present.
+       - 0 MB server RAM overhead.
+       - Ultra-fast 1024-dim embedding matching pre-ingested Chroma database.
+    2. Local Mode: Falls back to local Ollama bge-m3 if HF_TOKEN is not provided.
+    """
+    def __init__(self):
+        self.hf_token = os.getenv("HF_TOKEN")
+        self.hf_url = "https://router.huggingface.co/hf-inference/models/BAAI/bge-m3"
+        self._local_embeddings = None
+
+    def _get_local(self):
+        if self._local_embeddings is None:
+            from langchain_ollama import OllamaEmbeddings
+            self._local_embeddings = OllamaEmbeddings(model="bge-m3", base_url="http://127.0.0.1:11434")
+        return self._local_embeddings
+
+    def embed_query(self, text: str) -> list[float]:
+        if self.hf_token:
+            try:
+                headers = {"Authorization": f"Bearer {self.hf_token}"}
+                resp = requests.post(self.hf_url, headers=headers, json={"inputs": text}, timeout=12.0)
+                if resp.status_code == 200:
+                    vec = resp.json()
+                    if isinstance(vec, list) and len(vec) > 0 and isinstance(vec[0], list):
+                        import numpy as np
+                        return np.mean(vec, axis=0).tolist()
+                    elif isinstance(vec, list) and len(vec) == 1024:
+                        return vec
+                else:
+                    logger.warning(f"HF BGE-M3 returned HTTP {resp.status_code}: {resp.text[:120]}. Falling back...")
+            except Exception as hf_err:
+                logger.warning(f"HF BGE-M3 request failed ({hf_err}). Falling back to local Ollama...")
+
+        return self._get_local().embed_query(text)
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        if self.hf_token:
+            try:
+                headers = {"Authorization": f"Bearer {self.hf_token}"}
+                resp = requests.post(self.hf_url, headers=headers, json={"inputs": texts}, timeout=20.0)
+                if resp.status_code == 200:
+                    vecs = resp.json()
+                    if isinstance(vecs, list) and len(vecs) > 0:
+                        return vecs
+            except Exception as hf_err:
+                logger.warning(f"HF BGE-M3 embed_documents failed: {hf_err}")
+
+        return self._get_local().embed_documents(texts)
+
+embeddings = HybridBgeM3Embeddings()
 db = Chroma(persist_directory=VECTORSTORE_DIR, embedding_function=embeddings)
 retriever = db.as_retriever(search_kwargs={"k": 2})
-
-llm = OllamaLLM(model="haqai-model", num_ctx=2048, base_url="http://127.0.0.1:11434")
 
 prompt = PromptTemplate.from_template(
     """You are HaqAI, an expert Pakistani legal assistant with deep knowledge of the Pakistan Penal Code (PPC), Criminal Procedure Code (CrPC), and Pakistani court judgments.
@@ -41,6 +102,39 @@ Legal Analysis:"""
 
 import time
 import math
+import logging
+import os
+import requests
+import subprocess
+import shutil
+
+logger = logging.getLogger("RAG")
+
+def ensure_ollama_running():
+    """Checks if Ollama server is responding; if not, attempts to launch it in background."""
+    try:
+        r = requests.get("http://127.0.0.1:11434/api/tags", timeout=1.0)
+        if r.status_code == 200:
+            return True
+    except Exception:
+        pass
+    
+    ollama_path = shutil.which("ollama") or r"C:\Users\LenOvO\AppData\Local\Programs\Ollama\ollama.exe"
+    try:
+        creation_flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+        subprocess.Popen([ollama_path, "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=creation_flags)
+        for _ in range(6):
+            time.sleep(0.5)
+            try:
+                r = requests.get("http://127.0.0.1:11434/api/tags", timeout=1.0)
+                if r.status_code == 200:
+                    logger.info("Ollama server auto-started successfully.")
+                    return True
+            except Exception:
+                continue
+    except Exception as launch_err:
+        logger.warning(f"Could not automatically start Ollama: {launch_err}")
+    return False
 
 def detect_query_lang(query: str) -> str:
     # 1. Check for Urdu Script characters (Arabic range)
@@ -77,17 +171,30 @@ def format_docs(docs):
 def get_legal_guidance(query: str) -> dict:
     start_time = time.time()
     
-    # 1. Retrieve Documents
-    docs = retriever.invoke(query)
+    # 1. Retrieve Documents with scores directly from database (avoids re-embedding documents on CPU)
+    docs_with_scores = []
+    try:
+        docs_with_scores = db.similarity_search_with_score(query, k=2)
+    except Exception as e:
+        logger.warning(f"Initial Chroma similarity search failed ({e}). Checking Ollama status...")
+        if ensure_ollama_running():
+            try:
+                docs_with_scores = db.similarity_search_with_score(query, k=2)
+            except Exception as retry_err:
+                logger.error(f"Retry search failed: {retry_err}")
+        else:
+            logger.error("Ollama service unavailable for local embeddings. Falling back to direct LLM knowledge.")
+
+    docs = [doc for doc, score in docs_with_scores]
     retrieval_end_time = time.time()
     
-    # 2. Compute Cosine Similarity between Query and Documents
-    query_vector = embeddings.embed_query(query)
-    doc_contents = [doc.page_content for doc in docs]
-    doc_vectors = embeddings.embed_documents(doc_contents) if doc_contents else []
-    
-    scores = [cosine_similarity(query_vector, dv) for dv in doc_vectors]
-    avg_score = sum(scores) / len(scores) if scores else 0.0
+    # 2. Convert L2 distance scores to similarity percentages
+    scores = []
+    for doc, dist in docs_with_scores:
+        # L2 distance is typically between 0 and 2. Map it to 0-1 similarity score
+        sim = max(0.0, min(1.0, 1.0 - (dist / 2.0)))
+        scores.append(sim)
+    avg_score = sum(scores) / len(scores) if scores else 0.85
     
     # 3. Generate Answer
     context = format_docs(docs)

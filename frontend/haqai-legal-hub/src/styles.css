@@ -80,7 +80,7 @@
   --ring: var(--gold);
 
   --font-display: "Poppins", "Cormorant Garamond", serif;
-  --font-sans: "Poppins", "Jameel Noori Nastaliq", "Noto Nastaliq Urdu", system-ui, sans-serif;
+  --font-sans: "Inter", "Jameel Noori Nastaliq", "Noto Nastaliq Urdu", system-ui, sans-serif;
 
   --gradient-gold: linear-gradient(135deg, oklch(0.85 0.12 88), oklch(0.72 0.14 80));
   --gradient-navy: linear-gradient(180deg, oklch(0.16 0.04 265), oklch(0.20 0.05 265));
@@ -108,15 +108,32 @@
 
   --primary: oklch(0.16 0.04 265); /* Navy primary buttons in light mode */
   --primary-foreground: oklch(0.98 0.005 90); /* Light text on navy buttons */
-  --gold: oklch(0.52 0.11 82); /* Dark golden for light mode contrast */
-  --gold-soft: oklch(0.60 0.09 82);
-  --gradient-gold: linear-gradient(135deg, oklch(0.52 0.11 82), oklch(0.20 0.05 265)); /* Dark gold to navy gradient */
+  --gold: oklch(0.53 0.13 80); /* Solid rich dark golden for light mode */
+  --gold-soft: oklch(0.60 0.11 80);
+  --gradient-gold: linear-gradient(135deg, oklch(0.53 0.13 80), oklch(0.53 0.13 80)); /* Solid dark golden, no gradient fade */
   --gradient-navy: linear-gradient(180deg, oklch(0.98 0.005 90), oklch(0.93 0.01 90));
   --shadow-gold: 0 10px 40px -10px oklch(0.16 0.04 265 / 0.15);
   --shadow-elegant: 0 10px 40px -15px oklch(0.05 0.02 265 / 0.12);
 }
 
 .dark { color-scheme: dark; }
+
+/* Theme-adaptive logo switching */
+.logo-dark-theme {
+  display: block !important;
+}
+.logo-light-theme {
+  display: none !important;
+}
+
+.light .logo-dark-theme,
+html.light .logo-dark-theme {
+  display: none !important;
+}
+.light .logo-light-theme,
+html.light .logo-light-theme {
+  display: block !important;
+}
 
 @layer base {
   * { border-color: var(--color-border); }
@@ -135,6 +152,13 @@
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+  }
+  .light .text-gradient-gold,
+  html.light .text-gradient-gold {
+    background: none !important;
+    -webkit-background-clip: border-box !important;
+    background-clip: border-box !important;
+    color: var(--gold) !important;
   }
   .bg-gradient-navy { background: var(--gradient-navy); }
   .shadow-gold { box-shadow: var(--shadow-gold); }

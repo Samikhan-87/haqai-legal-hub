@@ -267,7 +267,7 @@ function Landing() {
           </div>
 
           {/* Right Side: 3D Scene Wrapper & Circuit Lines */}
-          <div className="lg:col-span-5 relative flex items-center justify-center w-full min-h-[400px] md:min-h-[550px]">
+          <div className="lg:col-span-5 relative flex items-center justify-center w-full min-h-[400px] md:min-h-[550px] -mt-6 md:-mt-10 lg:-mt-14">
             {/* SVG Circuit Lines behind 3D Object */}
             <svg 
               className="absolute inset-0 w-full h-full opacity-25 pointer-events-none z-0" 

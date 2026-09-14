@@ -5,13 +5,32 @@ export function Footer() {
     <footer className="relative border-t border-border mt-20">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 py-14 grid md:grid-cols-3 gap-10">
         <div>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-md bg-gradient-to-br from-[oklch(0.85_0.12_88)] to-[oklch(0.72_0.14_80)] flex items-center justify-center">
-              <Scale className="w-4 h-4 text-[var(--navy-deep)]" strokeWidth={2.5} />
+          <div className="flex items-center gap-3 mb-4">
+            <div className="relative w-11 h-11 flex items-center justify-center shrink-0">
+              <img 
+                src="/logo-crest.png" 
+                alt="HaqAI Emblem" 
+                className="w-full h-full object-contain logo-dark-theme" 
+              />
+              <img 
+                src="/logo-crest-dark.png" 
+                alt="HaqAI Emblem" 
+                className="w-full h-full object-contain logo-light-theme" 
+              />
             </div>
-            <span className="font-display text-lg font-semibold">
-              Haq<span className="text-gradient-gold">AI</span>
-            </span>N
+            <div className="flex flex-col justify-center select-none">
+              <div className="flex items-center text-lg font-bold tracking-[0.16em] leading-none font-sans">
+                <span className="text-foreground">HΛQ</span>
+                <span className="ml-1.5 text-gold">ΛI</span>
+              </div>
+              <div className="text-[7px] font-bold uppercase tracking-[0.25em] text-muted-foreground/80 mt-1 flex items-center gap-1 leading-none">
+                <span>LAW</span>
+                <span className="text-gold/70 text-[5px]">×</span>
+                <span>INTELLIGENCE</span>
+                <span className="text-gold/70 text-[5px]">×</span>
+                <span>JUSTICE</span>
+              </div>
+            </div>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
             AI-powered legal guidance grounded in Pakistani statutory and case law.

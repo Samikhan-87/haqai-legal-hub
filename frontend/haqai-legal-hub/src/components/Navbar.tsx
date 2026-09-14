@@ -39,16 +39,30 @@ export function Navbar() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-background/70 border-b border-border">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 group">
-          <div className="w-9 h-9 rounded-md bg-gradient-to-br from-[oklch(0.85_0.12_88)] to-[oklch(0.72_0.14_80)] flex items-center justify-center shadow-gold">
-            <Scale className="w-5 h-5 text-[var(--navy-deep)]" strokeWidth={2.5} />
+        <Link to="/" className="flex items-center gap-3.5 group">
+          <div className="relative w-11 h-11 md:w-12 md:h-12 flex items-center justify-center shrink-0">
+            <img 
+              src="/logo-crest.png" 
+              alt="HaqAI Emblem" 
+              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 logo-dark-theme" 
+            />
+            <img 
+              src="/logo-crest-dark.png" 
+              alt="HaqAI Emblem" 
+              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 logo-light-theme" 
+            />
           </div>
-          <div className="leading-tight">
-            <div className="font-display text-xl font-semibold tracking-wide">
-              Haq<span className="text-gradient-gold">AI</span>
+          <div className="flex flex-col justify-center select-none">
+            <div className="flex items-center text-xl md:text-[22px] font-bold tracking-[0.16em] leading-none font-sans">
+              <span className="text-foreground transition-colors group-hover:text-foreground/90">HΛQ</span>
+              <span className="ml-1.5 text-gold text-shadow-gold">ΛI</span>
             </div>
-            <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground -mt-0.5">
-              {lang === "en" ? "Legal Intelligence" : "قانونی معلومات"}
+            <div className="text-[7.5px] md:text-[8px] font-bold uppercase tracking-[0.28em] text-muted-foreground/80 mt-1.5 flex items-center gap-1 leading-none">
+              <span>{lang === "en" ? "LAW" : "قانون"}</span>
+              <span className="text-gold/70 text-[6px]">×</span>
+              <span>{lang === "en" ? "INTELLIGENCE" : "ذہانت"}</span>
+              <span className="text-gold/70 text-[6px]">×</span>
+              <span>{lang === "en" ? "JUSTICE" : "انصاف"}</span>
             </div>
           </div>
         </Link>

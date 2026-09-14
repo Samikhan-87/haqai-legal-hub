@@ -57,6 +57,7 @@ export function Law3DHeroCanvas() {
     // Main Group
     const mainGroup = new THREE.Group();
     mainGroup.scale.set(0.88, 0.88, 0.88);
+    mainGroup.position.set(0, 0.45, 0);
     scene.add(mainGroup);
 
     // Scale of Justice Group

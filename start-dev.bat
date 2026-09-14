@@ -1,6 +1,13 @@
 @echo off
 echo Starting HaqAI Development Servers...
 
+:: Start Ollama in the background for local bge-m3 embeddings
+echo Ensuring Ollama is running...
+where ollama >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    start "" /B ollama serve
+)
+
 :: Start the Python Backend
 echo Launching FastAPI Backend on http://localhost:8000...
 start "HaqAI Backend" cmd /k "cd backend && ..\.venv\Scripts\activate && uvicorn main:app --reload --port 8000"

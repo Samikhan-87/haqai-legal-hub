@@ -49,5 +49,6 @@ async def upload_image(file: UploadFile = File(...)):
 
 @app.post("/agent-query")
 def agent_query(req: QueryRequest):
-    result = run_agent(req.query, thread_id=req.thread_id)
-    return {"response": result}
+    # Call get_legal_guidance directly to avoid the extra agent rewrite step on CPU
+    result = get_legal_guidance(req.query)
+    return result

@@ -5,7 +5,7 @@ import time
 import logging
 from dotenv import load_dotenv
 import requests
-import google.generativeai as genai
+# import google.generativeai as genai
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -14,36 +14,74 @@ logger = logging.getLogger("LLMRouter")
 # Load environment variables from .env
 load_dotenv()
 
-# Configure Google Gemini
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-else:
-    logger.warning("GEMINI_API_KEY not found in environment or .env file. Gemini fallback will fail if triggered.")
+# Configure Groq Cloud
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_MODEL_NAME = "qwen/qwen3.8-27b"  # SOTA multilingual model on Groq
 
-# Default configurations
+if not GROQ_API_KEY:
+    logger.warning("GROQ_API_KEY not found in environment or .env file. Groq fallback will fail if triggered.")
+
+# [COMMENTED OUT GEMINI FALLBACK]
+# GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# if GEMINI_API_KEY:
+#     genai.configure(api_key=GEMINI_API_KEY)
+# else:
+#     logger.warning("GEMINI_API_KEY not found in environment or .env file.")
+# GEMINI_MODEL_NAME = "gemini-flash-latest"
+
 DEFAULT_PRIMARY_MODEL = "haqai-model"
-GEMINI_MODEL_NAME = "gemini-flash-latest"  # Fallback model
 TIMEOUT_LIMIT = 12.0  # seconds
 
 def detect_language(query: str) -> str:
     """
-    Detect language based on query content.
-    - If Urdu script characters are found -> urdu
-    - Else if matches Roman Urdu word list -> roman_urdu
-    - Else -> english
+    Accurately detect language based on query grammar and syntax:
+    - If Urdu script characters are found -> 'urdu'
+    - Else if Roman Urdu grammatical markers dominate -> 'roman_urdu'
+    - Else -> 'english'
     """
     # 1. Urdu Script range (Arabic unicode block)
     if any('\u0600' <= char <= '\u06FF' for char in query):
         return "urdu"
     
-    # 2. Roman Urdu common vocabulary words
-    roman_urdu_words = {
-        "hai", "hain", "ki", "ka", "ko", "se", "aur", "ab", "kya", "kia", "karo", "karu", "saza", "qatl", "faisla", 
-        "muqadma", "vakeel", "court", "kanoon", "hoga", "hoti", "hota", "gaya", "gayi", "mera", "meri", "kuch", "nahi"
+    # 2. Clean punctuation and split into words
+    clean_query = re.sub(r'[^\w\s]', ' ', query.lower())
+    words = set(clean_query.split())
+    
+    # Core Roman Urdu functional syntax (pronouns, auxiliary verbs, interrogatives)
+    roman_urdu_core = {
+        "hai", "hain", "kya", "kia", "kaise", "kese", "kyun", "kyu", "karo", "karna", "krna",
+        "karein", "karen", "karne", "krne", "batao", "bataen", "bataiye", "mujhe", "mujhy",
+        "mera", "meri", "mere", "hoga", "hogi", "hoge", "hoti", "hota", "hote", "nahi", "nhi",
+        "nahin", "gaya", "gayi", "gaye", "chahiye", "chahta", "chahti", "sakta", "sakti", "sakte",
+        "tha", "thi", "the", "raha", "rahi", "rahe", "apna", "apni", "apne", "kisi", "kisko",
+        "kaun", "konsa", "kaisi", "tareeqa", "tareeqay", "faisla", "wirasat"
     }
-    words = set(query.lower().split())
-    if words.intersection(roman_urdu_words):
+    
+    # Roman Urdu grammatical particles
+    roman_urdu_particles = {
+        "ki", "ka", "ko", "se", "ke", "me", "mein", "mai", "par", "pe", "aur", "ye", "yeh", "wo", "woh"
+    }
+    
+    # English structural grammar (determiners, prepositions, English question words, aux verbs)
+    english_core = {
+        "what", "which", "where", "when", "why", "who", "how", "is", "are", "was", "were",
+        "the", "this", "that", "these", "those", "under", "for", "with", "from", "about",
+        "does", "did", "do", "can", "could", "should", "would", "shall", "will", "have",
+        "has", "had", "between", "against", "explain", "punishment", "difference", "procedure"
+    }
+    
+    core_ur_count = len(words.intersection(roman_urdu_core))
+    part_ur_count = len(words.intersection(roman_urdu_particles))
+    eng_count = len(words.intersection(english_core))
+    
+    total_ur_score = core_ur_count * 2 + part_ur_count
+    total_en_score = eng_count * 2
+    
+    if total_ur_score > total_en_score:
+        return "roman_urdu"
+    elif total_en_score > 0:
+        return "english"
+    elif total_ur_score > 0:
         return "roman_urdu"
         
     return "english"
@@ -65,7 +103,10 @@ def get_language_config(lang: str) -> dict:
         }
     elif lang == "roman_urdu":
         return {
-            "instruction": "The query is in Roman Urdu. You MUST respond entirely in natural, casual, human-like Roman Urdu using the provided Roman Urdu headers. Do NOT write in Urdu script or English.",
+            "instruction": (
+                "The query is in Roman Urdu. You MUST respond entirely in natural, casual, human-like Roman Urdu using the provided Roman Urdu headers. "
+                "CRITICAL: Translate all legal context, cases, and analysis from English into Roman Urdu. Do NOT write in English or Urdu script under any circumstances."
+            ),
             "headers": (
                 "Mutaliqa Qanoon\n\n"
                 "Qanooni Tajzia\n\n"
@@ -107,19 +148,42 @@ def call_ollama_sync(model: str, prompt: str, timeout: float) -> str:
     response.raise_for_status()
     return response.json()["response"]
 
-def call_gemini_sync(model: str, prompt: str) -> str:
+def call_groq_sync(model: str, prompt: str) -> str:
     """
-    Synchronous call to Gemini API.
+    Synchronous call to Groq API (Qwen / Llama).
     """
-    if not GEMINI_API_KEY:
-        raise ValueError("GEMINI_API_KEY is not configured.")
-    model_instance = genai.GenerativeModel(model)
-    response = model_instance.generate_content(prompt)
-    return response.text
+    if not GROQ_API_KEY:
+        raise ValueError("GROQ_API_KEY is not configured in environment or .env file.")
+    
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.2,
+        "max_tokens": 800
+    }
+    response = requests.post(url, headers=headers, json=payload, timeout=20.0)
+    response.raise_for_status()
+    data = response.json()
+    return data["choices"][0]["message"]["content"]
+
+# [COMMENTED OUT GEMINI FALLBACK SYNC]
+# def call_gemini_sync(model: str, prompt: str) -> str:
+#     if not GEMINI_API_KEY:
+#         raise ValueError("GEMINI_API_KEY is not configured.")
+#     model_instance = genai.GenerativeModel(model)
+#     response = model_instance.generate_content(prompt)
+#     return response.text
 
 async def get_llm_response(query: str, context: str, documents: list, primary_model: str = DEFAULT_PRIMARY_MODEL) -> dict:
     """
-    Routes query to Ollama first with an 8-second timeout, falling back to Gemini if it fails or times out.
+    Routes query to Ollama first with a timeout, falling back to Groq Cloud (Qwen) if it fails or times out.
     """
     # 1. Detect language
     lang = detect_language(query)
@@ -157,26 +221,38 @@ Legal Analysis:"""
     model_used = ""
     start_time = time.time()
     
-    # 3. Call Primary local Ollama model
+    # [COMMENTED OUT LOCAL OLLAMA CALL - GROQ IS NOW PRIMARY FOR FAST 1-2S RESPONSES]
+    # try:
+    #     logger.info(f"Attempting to call local Ollama model '{primary_model}'...")
+    #     response_text = await asyncio.to_thread(call_ollama_sync, primary_model, prompt, TIMEOUT_LIMIT)
+    #     model_used = f"local-ollama ({primary_model})"
+    #     logger.info("Ollama responded successfully.")
+    # except Exception as e:
+    #     logger.warning(f"Ollama call failed or timed out: {e}. Falling back to Groq Cloud...")
+
+    # Primary Engine: Groq Cloud (Qwen 3.8-27b)
     try:
-        logger.info(f"Attempting to call local Ollama model '{primary_model}'...")
-        # Run synchronous request in a separate thread to support timeout cleanly
-        response_text = await asyncio.to_thread(call_ollama_sync, primary_model, prompt, TIMEOUT_LIMIT)
-        model_used = f"local-ollama ({primary_model})"
-        logger.info("Ollama responded successfully.")
-    except Exception as e:
-        logger.warning(f"Ollama call failed or timed out: {e}. Falling back to Google Gemini...")
+        logger.info(f"Generating legal response via Groq Cloud ({GROQ_MODEL_NAME})...")
+        response_text = await asyncio.to_thread(call_groq_sync, GROQ_MODEL_NAME, prompt)
+        model_used = f"groq-cloud ({GROQ_MODEL_NAME})"
+        logger.info("Groq Cloud responded successfully.")
+    except Exception as groq_err:
+        logger.error(f"Groq API call failed: {groq_err}")
+        error_details = str(groq_err)
+        is_quota_exceeded = "quota" in error_details.lower() or "429" in error_details or "limit" in error_details.lower()
         
-        # 4. Fallback to Google Gemini
-        fallback_start = time.time()
-        try:
-            response_text = await asyncio.to_thread(call_gemini_sync, GEMINI_MODEL_NAME, prompt)
-            model_used = f"gemini-fallback ({GEMINI_MODEL_NAME})"
-            logger.info("Gemini responded successfully as fallback.")
-        except Exception as gemini_err:
-            logger.error(f"Gemini fallback also failed: {gemini_err}")
-            # If everything fails, raise an exception or return a helpful local error message
-            raise RuntimeError("Both primary Ollama and fallback Gemini models failed to respond.") from gemini_err
+        if is_quota_exceeded:
+            response_text = (
+                "System Notification / سسٹمی اطلاع:\n\n"
+                "The Groq API has reached its temporary rate limit (429 Rate Limit Exceeded). Please wait a few seconds and try again.\n\n"
+                "گروک کلاؤڈ کا ریٹ لمٹ آ گیا ہے، برائے مہربانی چند سیکنڈ انتظار کے بعد دوبارہ کوشش کریں۔"
+            )
+        else:
+            response_text = (
+                "System Notification / سسٹمی اطلاع:\n\n"
+                f"Groq API Connection Error: {error_details}"
+            )
+        model_used = "system-error-handler"
 
     generation_latency = time.time() - start_time
 
